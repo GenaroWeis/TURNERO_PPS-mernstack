@@ -11,22 +11,10 @@ const getDisponibilidades = async (req, res) => {
   }
 };
 
+// Crear nueva disponibilidad (POST)
 const createDisponibilidad = async (req, res) => {
   try {
     const { diaSemana, horaInicio, horaFin, profesional } = req.body;
-
-    if (!diaSemana || !horaInicio || !horaFin || !profesional) {
-      return res.status(400).json({ status: "error", message: "Faltan datos obligatorios" });
-    }
-
-    // Validar formato hh:mm
-    const horaRegex = /^([01]\d|2[0-3]):[0-5]\d$/;
-    if (!horaRegex.test(horaInicio) || !horaRegex.test(horaFin)) {
-      return res.status(400).json({
-        status: "error",
-        message: "El formato de hora debe ser HH:MM (ej: 09:00, 14:30)"
-      });
-    }
 
     // Validar que horaInicio < horaFin
     if (horaInicio >= horaFin) {
@@ -75,13 +63,12 @@ const createDisponibilidad = async (req, res) => {
   }
 };
 
-// Obtener por ID (GET ID)
+// Obtener disponibilidad por ID (GET ID)
 const getDisponibilidadById = async (req, res) => {
   try {
     const disponibilidad = await Disponibilidad.findById(req.params.id)
       .populate("profesional", "nombre especialidad");
 
-    // Validación básica-----------------------------------------
     if (!disponibilidad) {
       return res.status(404).json({ status: "error", message: "Disponibilidad no encontrada" });
     }
@@ -92,7 +79,31 @@ const getDisponibilidadById = async (req, res) => {
   }
 };
 
-// Actualizar (PUT ID)
+// Obtener todas las disponibilidades de un profesional (GET por profesionalId)
+const getDisponibilidadesPorProfesional = async (req, res) => {
+  try {
+    const disponibilidades = await Disponibilidad.find({ profesional: req.params.profesionalId })
+      .populate("profesional", "nombre especialidad");
+
+    if (!disponibilidades.length) {
+      return res.status(404).json({
+        status: "error",
+        message: "No se encontraron disponibilidades para este profesional"
+      });
+    }
+
+    res.status(200).json({ status: "ok", data: disponibilidades });
+  } catch (err) {
+    res.status(500).json({
+      status: "error",
+      message: "Error al buscar disponibilidades",
+      error: err
+    });
+  }
+};
+
+
+// Actualizar disponibilidad (PUT ID)
 const updateDisponibilidad = async (req, res) => {
   try {
     const actualizada = await Disponibilidad.findByIdAndUpdate(req.params.id, req.body, { new: true });
@@ -102,7 +113,7 @@ const updateDisponibilidad = async (req, res) => {
   }
 };
 
-// Eliminar (DELETE ID)
+// Eliminar disponibilidad (DELETE ID)
 const deleteDisponibilidad = async (req, res) => {
   try {
     await Disponibilidad.findByIdAndDelete(req.params.id);
@@ -117,5 +128,6 @@ module.exports = {
   createDisponibilidad,
   getDisponibilidadById,
   updateDisponibilidad,
-  deleteDisponibilidad
+  deleteDisponibilidad,
+  getDisponibilidadesPorProfesional 
 };

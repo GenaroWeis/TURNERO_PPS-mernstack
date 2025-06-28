@@ -20,17 +20,13 @@ const createTurno = async (req, res) => {
   try {
     const { fecha, hora, profesional, cliente } = req.body;
 
-    // Validaciones básicas
-    if (!fecha || !hora || !profesional || !cliente) {
-      return res.status(400).json({ status: "error", message: "Faltan datos obligatorios" });
-    }
-
+    // Verificar si ya existe un turno con ese profesional en esa fecha y hora
     const existeTurno = await Turno.findOne({ profesional, fecha, hora });
     if (existeTurno) {
-        return res.status(400).json({
-            status: "error",
-            message: "Ya hay un turno agendado para ese horario con ese profesional"
-        });
+      return res.status(400).json({
+        status: "error",
+        message: "Ya hay un turno agendado para ese horario con ese profesional"
+      });
     }
 
     // Verificar que cliente y profesional existan
@@ -38,12 +34,6 @@ const createTurno = async (req, res) => {
     const existeProfesional = await Profesional.findById(profesional);
     if (!existeCliente || !existeProfesional) {
       return res.status(404).json({ status: "error", message: "Cliente o profesional inexistente" });
-    }
-
-    // Validar formato de hora (hh:mm)
-    const horaRegex = /^([0-1]\d|2[0-3]):[0-5]\d$/;
-    if (!horaRegex.test(hora)) {
-      return res.status(400).json({ status: "error", message: "El formato de la hora debe ser HH:MM (24h)" });
     }
 
     // Obtener el día de la semana
@@ -59,7 +49,7 @@ const createTurno = async (req, res) => {
       });
     }
 
-    // Validar que la hora solicitada esté dentro del rango
+    // Verificar que la hora esté dentro del rango de disponibilidad
     if (hora < disponibilidad.horaInicio || hora >= disponibilidad.horaFin) {
       return res.status(400).json({
         status: "error",
@@ -67,16 +57,7 @@ const createTurno = async (req, res) => {
       });
     }
 
-    // Verificar que el turno no esté duplicado (profesional ya ocupado en esa fecha y hora)
-    const turnoExistente = await Turno.findOne({ fecha, hora, profesional });
-    if (turnoExistente) {
-      return res.status(400).json({
-        status: "error",
-        message: "El profesional ya tiene un turno asignado en esa fecha y hora"
-      });
-    }
-
-    // Crear el turno
+    // Crear y guardar el nuevo turno
     const nuevoTurno = new Turno(req.body);
     const turnoGuardado = await nuevoTurno.save();
     res.status(201).json({ status: "ok", data: turnoGuardado });
@@ -92,7 +73,6 @@ const getTurnoById = async (req, res) => {
       .populate("profesional", "nombre especialidad")
       .populate("cliente", "nombre email");
 
-    // Validación básica-----------------------------------------
     if (!turno) {
       return res.status(404).json({ status: "error", message: "Turno no encontrado" });
     }

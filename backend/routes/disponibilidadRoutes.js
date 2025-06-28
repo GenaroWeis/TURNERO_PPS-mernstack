@@ -2,19 +2,59 @@ const express = require("express");
 const router = express.Router();
 const disponibilidadController = require("../controllers/disponibilidadController");
 
+// Validadores
+const {
+  validarCrearDisponibilidad,
+  validarActualizarDisponibilidad,
+  validarIdDisponibilidad,
+  validarEliminarDisponibilidad,
+  validarIdProfesionalDisponibilidad
+} = require("../validators/disponibilidadValidator");
+
+const validateRequest = require("../middleware/validateRequest");
+
 // GET todas las disponibilidades
 router.get("/", disponibilidadController.getDisponibilidades);
 
-// POST crear una nueva disponibilidad
-router.post("/", disponibilidadController.createDisponibilidad);
+// POST crear una nueva disponibilidad con validaciones
+router.post(
+  "/",
+  validarCrearDisponibilidad,
+  validateRequest,
+  disponibilidadController.createDisponibilidad
+);
 
-// GET por ID
-router.get("/:id", disponibilidadController.getDisponibilidadById);
+// GET por ID con validación
+router.get(
+  "/:id",
+  validarIdDisponibilidad,
+  validateRequest,
+  disponibilidadController.getDisponibilidadById
+);
 
-// PUT actualizar
-router.put("/:id", disponibilidadController.updateDisponibilidad);
+// GET todas las disponibilidades de un profesional específico
+router.get(
+  "/profesional/:profesionalId",
+  validarIdProfesionalDisponibilidad,
+  validateRequest,
+  disponibilidadController.getDisponibilidadesPorProfesional
+);
 
-// DELETE eliminar
-router.delete("/:id", disponibilidadController.deleteDisponibilidad);
+
+// PUT actualizar con validaciones
+router.put(
+  "/:id",
+  validarActualizarDisponibilidad,
+  validateRequest,
+  disponibilidadController.updateDisponibilidad
+);
+
+// DELETE eliminar con validación
+router.delete(
+  "/:id",
+  validarEliminarDisponibilidad,
+  validateRequest,
+  disponibilidadController.deleteDisponibilidad
+);
 
 module.exports = router;

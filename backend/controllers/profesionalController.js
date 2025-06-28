@@ -30,10 +30,11 @@ const createProfesional = async (req, res) => {
     res.status(400).json({
       status: "error",
       message: "Error al crear profesional",
-      error: err
+      error: err.message || err
     });
   }
 };
+
 
 // Obtener un profesional por ID (GET ID)
 const getProfesionalById = async (req, res) => {
@@ -57,6 +58,7 @@ const getProfesionalById = async (req, res) => {
     });
   }
 };
+
 
 // Actualizar un profesional (PUT ID)
 const updateProfesional = async (req, res) => {
