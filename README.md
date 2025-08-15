@@ -156,7 +156,13 @@ A continuación se detallan todas las validaciones aplicadas para cada entidad d
 
 
 
-
+front:
+explicar el funcionamiento del front
+axios, etc
+explicar como funcionan las pages y sus detalles (fetchData() trae la lista cuando entra a la página.
+handleDelete() usa window.confirm (simple y suficiente para MVP).
+Usamos mensajes alert para éxito/error. Después podemos cambiar por toasts.)
+esta la page y la pageform, esta segunda abre un formulario para crear y editar si reconoce el "id" edita si no crea
 
 
 

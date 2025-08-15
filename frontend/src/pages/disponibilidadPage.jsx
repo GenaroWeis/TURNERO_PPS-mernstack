@@ -1,4 +1,4 @@
 function DisponibilidadPage() {
-  return <h1>Listado de Clientes</h1>;
+  return <h1>Listado de Disponibilidades</h1>;
 }
-export default DisponibilidadPagePage;
+export default DisponibilidadPage;
