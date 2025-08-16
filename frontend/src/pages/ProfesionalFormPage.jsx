@@ -1,3 +1,4 @@
+// src/pages/ProfesionalFormPage.jsx
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams, Link } from 'react-router-dom';
 import {
@@ -5,6 +6,7 @@ import {
   createProfesional,
   updateProfesional,
 } from '../services/profesionalService';
+import { parseApiErrors } from '../utils/parseApiErrors'; // <--- NUEVO
 
 const initialForm = {
   nombre: '',
@@ -20,6 +22,7 @@ function ProfesionalFormPage() {
   const [form, setForm] = useState(initialForm);
   const [errors, setErrors] = useState({});
   const [loading, setLoading] = useState(Boolean(id));
+  const [submitting, setSubmitting] = useState(false); // <--- opcional
   const isEdit = Boolean(id);
 
   useEffect(() => {
@@ -57,11 +60,16 @@ function ProfesionalFormPage() {
   const handleChange = (ev) => {
     const { name, value } = ev.target;
     setForm((prev) => ({ ...prev, [name]: value }));
+    setErrors((prev) => ({ ...prev, [name]: undefined })); // <--- limpiar error del campo
   };
 
   const handleSubmit = async (ev) => {
     ev.preventDefault();
-    if (!validate()) return;
+    setSubmitting(true);
+    setErrors({});
+
+    // Podés mantener esta validación básica de UX rápida:
+    if (!validate()) { setSubmitting(false); return; }
 
     try {
       if (isEdit) {
@@ -72,8 +80,11 @@ function ProfesionalFormPage() {
         navigate('/profesionales', { state: { message: 'Profesional creado correctamente.' } });
       }
     } catch (err) {
-      // Mensaje genérico; si tu API devuelve errores detallados, podemos mostrarlos aquí
-      alert('Hubo un error al guardar. Verifica los datos o intenta más tarde.');
+      // En vez de alert, mostramos los mensajes del backend por campo
+      const fieldMap = parseApiErrors(err);
+      setErrors(fieldMap);
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -82,6 +93,13 @@ function ProfesionalFormPage() {
   return (
     <div className="container py-3">
       <h1 className="h4 mb-3">{isEdit ? 'Editar profesional' : 'Nuevo profesional'}</h1>
+
+      {/* Error general del backend */}
+      {errors._general && (
+        <div className="alert alert-danger" role="alert">
+          {errors._general}
+        </div>
+      )}
 
       <form onSubmit={handleSubmit} noValidate>
         <div className="mb-3">
@@ -115,7 +133,7 @@ function ProfesionalFormPage() {
             value={form.email}
             onChange={handleChange}
           />
-        {errors.email && <div className="invalid-feedback">{errors.email}</div>}
+          {errors.email && <div className="invalid-feedback">{errors.email}</div>}
         </div>
 
         <div className="mb-3">
@@ -130,7 +148,7 @@ function ProfesionalFormPage() {
         </div>
 
         <div className="d-flex gap-2">
-          <button type="submit" className="btn btn-primary">
+          <button type="submit" className="btn btn-primary" disabled={submitting}>
             {isEdit ? 'Guardar cambios' : 'Crear profesional'}
           </button>
           <Link to="/profesionales" className="btn btn-outline-secondary">Cancelar</Link>

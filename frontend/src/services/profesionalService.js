@@ -20,10 +20,16 @@ export const createProfesional = async (payload) => {
   return res.data?.data;
 };
 
+
 export const updateProfesional = async (id, payload) => {
   const res = await api.put(`${RESOURCE}/${id}`, payload);
-  // { status, data: { ...actualizado } }
-  return res.data?.data;
+  const updated = res.data?.data;
+  if (!updated) {// si el id es inexistente
+    const err = new Error('No encontrado');
+    err.response = { data: { message: 'Profesional no encontrado' } };
+    throw err;
+  }
+  return updated;
 };
 
 export const removeProfesional = async (id) => {

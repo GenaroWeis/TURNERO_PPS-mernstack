@@ -8,9 +8,11 @@ exports.validarCrearProfesional = [
     .trim(),
 
   body("especialidad")
-    .notEmpty().withMessage("La especialidad es obligatoria")
-    .isString().withMessage("La especialidad debe ser texto")
-    .trim(),
+  .notEmpty().withMessage("La especialidad es obligatoria")
+  .isString().withMessage("La especialidad debe ser texto")
+  .custom(v => !/^\d+(\.\d+)?$/.test(String(v))).withMessage("La especialidad no puede ser solo números")
+  .matches(/[A-Za-zÁÉÍÓÚÑáéíóúñ]/).withMessage("La especialidad debe contener letras")
+  .trim(),
 
   body("email")
     .notEmpty().withMessage("El email es obligatorio")

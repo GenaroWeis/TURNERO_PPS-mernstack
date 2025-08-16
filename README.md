@@ -46,7 +46,7 @@ A continuación se detallan todas las validaciones aplicadas para cada entidad d
 ###### POST `/profesionales`
 
 - `nombre`: obligatorio, mínimo 2 caracteres, solo letras y espacios.
-- `especialidad`: obligatoria, tipo texto.
+- `especialidad`: obligatoria, tipo texto, mínimo 1 letra.
 - `email`: obligatorio, debe ser un email válido.
 - `telefono`: obligatorio, solo números, entre 8 y 15 dígitos.
 
