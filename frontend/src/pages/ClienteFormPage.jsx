@@ -6,10 +6,10 @@ import { useNavigate, useParams, Link } from 'react-router-dom';
 // useParams → obtiene parámetros de la URL, como el id del profesional
 // Link → para generar enlaces que no recargan la página
 import {
-  getProfesionalById,
-  createProfesional,
-  updateProfesional,
-} from '../services/profesionalService';
+  getClienteById,
+  createCliente,
+  updateCliente,
+} from '../services/clienteService';
 // Importamos funciones del service para interactuar con el backend
 import { parseApiErrors } from '../utils/parseApiErrors';
 // importamos el adaptador de errores
@@ -17,13 +17,15 @@ import { parseApiErrors } from '../utils/parseApiErrors';
 // Estado inicial del formulario: todos los campos vacíos
 const initialForm = {
   nombre: '',
-  especialidad: '',
+  apellido: '',
   email: '',
   telefono: '',
+  dni: '',
+  direccion: '',
 };
 
-function ProfesionalFormPage() {
-  const { id } = useParams(); // si existe -> estamos editando un profesional
+function ClienteFormPage() {
+  const { id } = useParams(); // si existe -> estamos editando un cliente
   const navigate = useNavigate(); // para redirigir luego de crear/editar
 
   const [form, setForm] = useState(initialForm);
@@ -35,18 +37,20 @@ function ProfesionalFormPage() {
   useEffect(() => {
     const load = async () => {
       try {
-        if (!id) return;// Si no hay id, es creación → no cargamos nada
-        const data = await getProfesionalById(id); // Llamamos al backend para traer los datos del profesional
+        if (!id) return; // Si no hay id, es creación → no cargamos nada
+        const data = await getClienteById(id); // Llamamos al backend para traer los datos
         setForm({
           nombre: data.nombre || '',
-          especialidad: data.especialidad || '',
+          apellido: data.apellido || '',
           email: data.email || '',
           telefono: data.telefono || '',
+          dni: data.dni || '',
+          direccion: data.direccion || '',
         });
         // Actualizamos el formulario con los datos recibidos
       } catch (err) {
         // Si falla, volvemos al listado con un error
-        navigate('/profesionales', { state: { message: 'No se pudo cargar el profesional.' } });
+        navigate('/clientes', { state: { message: 'No se pudo cargar el cliente.' } });
       } finally {
         setLoading(false);// Terminamos de cargar
       }
@@ -57,10 +61,12 @@ function ProfesionalFormPage() {
   const validate = () => {
     const e = {};
     if (!form.nombre.trim()) e.nombre = 'El nombre es obligatorio.';
-    if (!form.especialidad.trim()) e.especialidad = 'La especialidad es obligatoria.';
+    if (!form.apellido.trim()) e.apellido = 'El apellido es obligatorio.';
     if (!form.email.trim()) e.email = 'El email es obligatorio.';
     else if (!/^\S+@\S+\.\S+$/.test(form.email)) e.email = 'Formato de email inválido.';
     if (!form.telefono.trim()) e.telefono = 'El teléfono es obligatorio.';
+    if (!form.dni.trim()) e.dni = 'El DNI es obligatorio.';
+    if (!form.direccion.trim()) e.direccion = 'La dirección es obligatoria.';
     // Validaciones básicas del front: no vacíos y formato de email 
     setErrors(e);
     return Object.keys(e).length === 0;
@@ -70,24 +76,24 @@ function ProfesionalFormPage() {
   const handleChange = (ev) => {
     const { name, value } = ev.target;
     setForm((prev) => ({ ...prev, [name]: value }));// Actualizamos el campo que cambió sin tocar los otros
-    setErrors((prev) => ({ ...prev, [name]: undefined, _general: undefined }));// Limpiamos el error de este campo en tiempo real 
+    setErrors((prev) => ({ ...prev, [name]: undefined, _general: undefined }));// Limpiamos el error de este campo en tiempo real
   };
 
   const handleSubmit = async (ev) => {
     ev.preventDefault();// Evita que la página se recargue
-    if (submitting) return; // prevenimos doble submit
+    if (submitting) return;// prevenimos doble submit
     setSubmitting(true);
-    setErrors({}); // limpiamos errores anteriores
+    setErrors({});// limpiamos errores anteriores
 
     if (!validate()) { setSubmitting(false); return; }// Validación rápida de UX antes de llamar al backend
 
     try {
       if (isEdit) {
-        await updateProfesional(id, form); // Actualizamos el profesional en el backend
-        navigate('/profesionales', { state: { message: 'Profesional actualizado correctamente.' } });// Redirigimos al listado con mensaje de éxito
+        await updateCliente(id, form);// Actualizamos el cliente en el backend
+        navigate('/clientes', { state: { message: 'Cliente actualizado correctamente.' } });// Redirigimos al listado con mensaje de éxito
       } else {
-        await createProfesional(form);// Creamos un nuevo profesional en el backend
-        navigate('/profesionales', { state: { message: 'Profesional creado correctamente.' } });// Redirigimos al listado con mensaje de éxito
+        await createCliente(form);// Creamos un nuevo cliente en el backend
+        navigate('/clientes', { state: { message: 'Cliente creado correctamente.' } });// Redirigimos al listado con mensaje de éxito
       }
     } catch (err) {
       const fieldMap = parseApiErrors(err);
@@ -99,11 +105,10 @@ function ProfesionalFormPage() {
 
   if (loading) return <div className="container py-3">Cargando...</div>;// Mientras estamos cargando datos (solo en edición), mostramos cartel y no renderizamos el form
 
- return (
+  return (
     <div className="container py-3">
-      <h1 className="h3 mb-3">{isEdit ? 'Editar Profesional' : 'Nuevo Profesional'}</h1>
+      <h1 className="h3 mb-3">{isEdit ? 'Editar Cliente' : 'Nuevo Cliente'}</h1>
 
-      {/* mensaje general de error del backend */}
       {errors._general && <div className="alert alert-danger">{errors._general}</div>}
 
       <form onSubmit={handleSubmit} noValidate>
@@ -120,15 +125,15 @@ function ProfesionalFormPage() {
         </div>
 
         <div className="mb-3">
-          <label className="form-label">Especialidad</label>
+          <label className="form-label">Apellido</label>
           <input
             type="text"
-            name="especialidad"
-            className={`form-control ${errors.especialidad ? 'is-invalid' : ''}`}
-            value={form.especialidad}
+            name="apellido"
+            className={`form-control ${errors.apellido ? 'is-invalid' : ''}`}
+            value={form.apellido}
             onChange={handleChange}
           />
-          {errors.especialidad && <div className="invalid-feedback">{errors.especialidad}</div>}
+          {errors.apellido && <div className="invalid-feedback">{errors.apellido}</div>}
         </div>
 
         <div className="mb-3">
@@ -155,13 +160,37 @@ function ProfesionalFormPage() {
           {errors.telefono && <div className="invalid-feedback">{errors.telefono}</div>}
         </div>
 
+        <div className="mb-3">
+            <label className="form-label">DNI</label>
+            <input
+                type="text"
+                name="dni"
+                className={`form-control ${errors.dni ? 'is-invalid' : ''}`}
+                value={form.dni}
+                onChange={handleChange}
+            />
+            {errors.dni && <div className="invalid-feedback">{errors.dni}</div>}
+        </div>
+
+        <div className="mb-3">
+          <label className="form-label">Dirección</label>
+          <input
+            type="text"
+            name="direccion"
+            className={`form-control ${errors.direccion ? 'is-invalid' : ''}`}
+            value={form.direccion}
+            onChange={handleChange}
+          />
+          {errors.direccion && <div className="invalid-feedback">{errors.direccion}</div>}
+        </div>
+
         <button type="submit" className="btn btn-primary" disabled={submitting}>
           {submitting ? 'Guardando...' : isEdit ? 'Actualizar' : 'Crear'}
         </button>
-        <Link to="/profesionales" className="btn btn-secondary ms-2">Cancelar</Link>
+        <Link to="/clientes" className="btn btn-secondary ms-2">Cancelar</Link>
       </form>
     </div>
   );
 }
 
-export default ProfesionalFormPage;
+export default ClienteFormPage;
