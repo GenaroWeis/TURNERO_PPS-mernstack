@@ -171,11 +171,12 @@ esta la page y la pageform, esta segunda abre un formulario para crear y editar 
 
 
 
+la logica de funcionamiento del front esta documentada en base a comentarios en los codigos de profesionales, se utilizo la misma para todos
 
 
 
-
-
+parseApiErrors es una función de utilidad que toma un error que vino del backend  y lo transforma en un formato que React puede mostrar en los formularios.
+En lugar de mostrar solo un alert default como "Ocurrió un error", esta función nos devuelve un objeto con claves por campo del formulario y valores con los mensajes de error que se validan en el backend
 
 
 
