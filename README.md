@@ -165,10 +165,28 @@ Usamos mensajes alert para éxito/error. Después podemos cambiar por toasts.)
 esta la page y la pageform, esta segunda abre un formulario para crear y editar si reconoce el "id" edita si no crea
 
 
+BACKEND: explicar que en disponibilidad se ponen los dias de la semana y horarios disponibles de un profesional
+y cuando uno busca un turno se hace una conversion para ver si ese dia de la semana en ese horario se va a a encontrar disponible
+"tengo que agregar alguna referencia para que el usser sepa que en el formato dd/mm/yy el dia que elija atine con las disponibilidades de un profecional, por ahora deje el calendario como para guiarse"
 
 
+#### FORMATO "BASE DE DATOS PARA UN GESTOR DE TURNOS USO ADMINISTRATIVO"
+El programa es como si fuese una agenda para registrar turnos, un administrador se encarga de manejarlo
+tiene cargados todos sus profesionales
+las disponibilidades de cada profesional
+los clientes que llegan son registrados tambien
+y se asigna un turno en base a la disponibilidad
+cuando el cliente viene al turno el administrador le consulta por que turno vino
+lo chequea en la base de datos
+y cambia el estado a confirmado
 
 
+POR EJEMPLO: salon de belleza
+-tengo distintos profesionales(estilista, colorista etc)
+- cuando viene el cliente quiere agendar un turno
+-se lo registra en la base de datos
+-se agenda con un profesional de los que ya estan cargados
+-
 
 
 la logica de funcionamiento del front esta documentada en base a comentarios en los codigos de profesionales, se utilizo la misma para todos

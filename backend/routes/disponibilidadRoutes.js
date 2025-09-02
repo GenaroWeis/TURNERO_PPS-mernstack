@@ -16,6 +16,14 @@ const validateRequest = require("../middleware/validateRequest");
 // GET todas las disponibilidades
 router.get("/", disponibilidadController.getDisponibilidades);
 
+// GET todas las disponibilidades de un profesional específico
+router.get(
+  "/profesional/:profesionalId",
+  validarIdProfesionalDisponibilidad,
+  validateRequest,
+  disponibilidadController.getDisponibilidadesPorProfesional
+);
+
 // POST crear una nueva disponibilidad con validaciones
 router.post(
   "/",
@@ -32,13 +40,7 @@ router.get(
   disponibilidadController.getDisponibilidadById
 );
 
-// GET todas las disponibilidades de un profesional específico
-router.get(
-  "/profesional/:profesionalId",
-  validarIdProfesionalDisponibilidad,
-  validateRequest,
-  disponibilidadController.getDisponibilidadesPorProfesional
-);
+
 
 
 // PUT actualizar con validaciones
