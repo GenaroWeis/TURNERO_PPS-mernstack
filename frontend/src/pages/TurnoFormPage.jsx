@@ -1,25 +1,22 @@
-// src/pages/TurnoFormPage.jsx
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate, useParams, Link } from 'react-router-dom';
-import { getTurnoById, createTurno, updateTurno } from '../services/turnoService';
+
+import { 
+  getTurnoById, 
+  createTurno, 
+  updateTurno 
+} from '../services/turnoService';
 import { listProfesionales } from '../services/profesionalService';
 import { listClientes } from '../services/clienteService';
-import { listDisponibilidadesByProfesional } from '../services/disponibilidadService';
 import { parseApiErrors } from '../utils/parseApiErrors';
 
-// Estado inicial
-const initialForm = { fecha: '', hora: '', estado: 'pendiente', profesional: '', cliente: '' };
-
-// Normalizar días (minúsculas + sin acentos)
-const normalizeDia = (s) =>
-  s ? s.toString().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '') : '';
-
-// YYYY-MM-DD → nombre de día (UTC)
-const dayNameFromDate = (yyyyMMdd) => {
-  if (!yyyyMMdd) return null;
-  const dias = ['domingo','lunes','martes','miércoles','jueves','viernes','sábado'];
-  const d = new Date(yyyyMMdd);       // input date entrega YYYY-MM-DD (UTC midnight)
-  return dias[d.getUTCDay()];          // usamos UTC para evitar corrimientos
+// Estado inicial del formulario
+const initialForm = {
+  fecha: '',        // YYYY-MM-DD
+  hora: '',         // HH:mm
+  estado: 'pendiente',
+  profesional: '',
+  cliente: '',
 };
 
 // ISO → YYYY-MM-DD para input date
@@ -29,55 +26,19 @@ const toDateInput = (value) => {
   return isNaN(d) ? '' : d.toISOString().slice(0, 10);
 };
 
-// Generar HH:mm en pasos dentro [inicio, fin)
-const genTimeSlots = (horaInicio, horaFin, stepMinutes = 30) => {
-  if (!horaInicio || !horaFin) return [];
-  const [hiH, hiM] = horaInicio.split(':').map(Number);
-  const [hfH, hfM] = horaFin.split(':').map(Number);
-  const start = hiH * 60 + (hiM || 0);
-  const end = hfH * 60 + (hfM || 0);
-  const out = [];
-  for (let m = start; m < end; m += stepMinutes) {
-    const h = Math.floor(m / 60), mm = m % 60;
-    out.push(String(h).padStart(2,'0') + ':' + String(mm).padStart(2,'0'));
-  }
-  return out;
-};
-
 function TurnoFormPage() {
   const { id } = useParams();
   const navigate = useNavigate();
 
-  // Estado base del form y catálogos
   const [form, setForm] = useState(initialForm);
   const [errors, setErrors] = useState({});
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [profesionales, setProfesionales] = useState([]);
   const [clientes, setClientes] = useState([]);
+  const isEdit = Boolean(id);
 
-  // Disponibilidades y vista
-  const [disponibilidades, setDisponibilidades] = useState([]); // [{ diaSemana, horaInicio, horaFin }]
-  const [franjaDelDia, setFranjaDelDia] = useState(null);       // { horaInicio, horaFin }
-  const [horaOptions, setHoraOptions] = useState([]);            // ['09:00','09:30',...]
-
-  // Chips (días en verde/gris)
-  const diasDisponibles = useMemo(
-    () => new Set(disponibilidades.map(d => normalizeDia(d.diaSemana))),
-    [disponibilidades]
-  );
-  const diasOrden = ['lunes','martes','miércoles','jueves','viernes','sábado','domingo'];
-
-  // Helper: dada una fecha y una lista de disp, devuelve { franja, slots }
-  const computeFranjaYSlots = (yyyyMMdd, disp) => {
-    if (!yyyyMMdd || !disp?.length) return { franja: null, slots: [] };
-    const dia = dayNameFromDate(yyyyMMdd);
-    const franja = disp.find(d => normalizeDia(d.diaSemana) === normalizeDia(dia)) || null;
-    const slots = franja ? genTimeSlots(franja.horaInicio, franja.horaFin, 30) : [];
-    return { franja, slots };
-  };
-
-  // Carga inicial
+  // Carga inicial (profesionales, clientes, y datos si es edición)
   useEffect(() => {
     const load = async () => {
       try {
@@ -88,23 +49,13 @@ function TurnoFormPage() {
 
         if (id) {
           const data = await getTurnoById(id);
-          const pf = data.profesional?._id || '';
-          const fecha = toDateInput(data.fecha) || '';
           setForm({
-            fecha,
+            fecha: toDateInput(data.fecha) || '',
             hora: data.hora || '',
             estado: data.estado || 'pendiente',
-            profesional: pf,
+            profesional: data.profesional?._id || '',
             cliente: data.cliente?._id || '',
           });
-
-          if (pf) {
-            const disp = await listDisponibilidadesByProfesional(pf);
-            setDisponibilidades(disp);
-            const { franja, slots } = computeFranjaYSlots(fecha, disp);
-            setFranjaDelDia(franja);
-            setHoraOptions(slots);
-          }
         } else {
           setForm(initialForm);
         }
@@ -115,44 +66,9 @@ function TurnoFormPage() {
       }
     };
     load();
-  }, [id, navigate]);
+  }, [id, isEdit, navigate]);
 
-  // Al cambiar profesional: traer sus disponibilidades y resetear fecha/hora
-  useEffect(() => {
-    const sync = async () => {
-      if (!form.profesional) {
-        setDisponibilidades([]); setFranjaDelDia(null); setHoraOptions([]); return;
-      }
-      const disp = await listDisponibilidadesByProfesional(form.profesional);
-      setDisponibilidades(disp);
-
-      // Recalcular franja/horas si ya hay fecha elegida
-      if (form.fecha) {
-        const { franja, slots } = computeFranjaYSlots(form.fecha, disp);
-        setFranjaDelDia(franja);
-        setHoraOptions(slots);
-        if (form.hora && !slots.includes(form.hora)) setForm(prev => ({ ...prev, hora: '' }));
-      } else {
-        setFranjaDelDia(null); setHoraOptions([]);
-      }
-    };
-    sync();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [form.profesional]);
-
-  // Al cambiar fecha: recalcular franja/horas
-  useEffect(() => {
-    if (!form.fecha || disponibilidades.length === 0) {
-      setFranjaDelDia(null); setHoraOptions([]); return;
-    }
-    const { franja, slots } = computeFranjaYSlots(form.fecha, disponibilidades);
-    setFranjaDelDia(franja);
-    setHoraOptions(slots);
-    if (form.hora && !slots.includes(form.hora)) setForm(prev => ({ ...prev, hora: '' }));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [form.fecha, disponibilidades]);
-
-  // Validación básica
+  // Validación básica de front
   const validate = () => {
     const e = {};
     if (!form.profesional) e.profesional = 'Seleccioná un profesional.';
@@ -166,52 +82,40 @@ function TurnoFormPage() {
   // Cambios en inputs
   const handleChange = (ev) => {
     const { name, value } = ev.target;
-    setForm(prev => ({ ...prev, [name]: value }));
-    setErrors(prev => ({ ...prev, [name]: undefined, _general: undefined }));
-  };
-
-  // Cambio específico de profesional: resetea fecha/hora (evitamos doble setState)
-  const handleChangeProfesional = (ev) => {
-    const value = ev.target.value;
-    setForm(prev => ({ ...prev, profesional: value, fecha: '', hora: '' }));
-    setErrors(prev => ({ ...prev, profesional: undefined, fecha: undefined, hora: undefined, _general: undefined }));
+    setForm(prev => ({ ...prev, [name]: value }));// actualizamos el campo
+    setErrors(prev => ({ ...prev, [name]: undefined, _general: undefined }));// limpiamos error del campo y el general
   };
 
   // Envío
   const handleSubmit = async (ev) => {
     ev.preventDefault();
-    if (submitting) return;
+    if (submitting) return;// evitar doble clic
     setSubmitting(true);
-    setErrors({});
-    if (!validate()) { setSubmitting(false); return; }
+    setErrors({});// limpiar errores previos
+
+    if (!validate()) { setSubmitting(false); return; }// validación rápida
+
     try {
-      if (id) {
-        await updateTurno(id, form);
+      if (isEdit) {
+        await updateTurno(id, form);// actualizar turno
         navigate('/turnos', { state: { message: 'Turno actualizado correctamente.' } });
       } else {
-        await createTurno(form);
+        await createTurno(form);// crear turno
         navigate('/turnos', { state: { message: 'Turno creado correctamente.' } });
       }
     } catch (err) {
+      // Muestra mensajes del backend, llegan en data.message → _general
       setErrors(parseApiErrors(err));
     } finally {
       setSubmitting(false);
     }
   };
 
-  // Hint informativo
-  const hintDisponibilidad = useMemo(() => {
-    if (!form.profesional) return 'Seleccioná un profesional para ver disponibilidad.';
-    if (!form.fecha) return 'Elegí una fecha para ver los horarios disponibles.';
-    if (!franjaDelDia) return 'Sin disponibilidad para ese día.';
-    return `Disponibilidad: ${franjaDelDia.horaInicio} - ${franjaDelDia.horaFin}`;
-  }, [form.profesional, form.fecha, franjaDelDia]);
-
   if (loading) return <div className="container py-3">Cargando...</div>;
 
   return (
     <div className="container py-3">
-      <h1 className="h3 mb-3">{id ? 'Editar Turno' : 'Nuevo Turno'}</h1>
+      <h1 className="h3 mb-3">{isEdit ? 'Editar Turno' : 'Nuevo Turno'}</h1>
 
       {errors._general && <div className="alert alert-danger">{errors._general}</div>}
 
@@ -223,7 +127,7 @@ function TurnoFormPage() {
             name="profesional"
             className={`form-select ${errors.profesional ? 'is-invalid' : ''}`}
             value={form.profesional}
-            onChange={handleChangeProfesional} // ← resetea fecha/hora
+            onChange={handleChange}
           >
             <option value="">Seleccioná un profesional</option>
             {profesionales.map((p) => (
@@ -235,27 +139,8 @@ function TurnoFormPage() {
           {errors.profesional && <div className="invalid-feedback">{errors.profesional}</div>}
         </div>
 
-        {/* Chips de días con disponibilidad */}
-        <div className="mb-2">
-          <div className="form-text">Días con disponibilidad del profesional</div>
-          <div className="d-flex flex-wrap gap-2">
-            {diasOrden.map((lbl) => {
-              const disponible = diasDisponibles.has(normalizeDia(lbl));
-              return (
-                <span
-                  key={lbl}
-                  className={`badge ${disponible ? 'bg-success' : 'bg-secondary'}`}
-                  title={disponible ? 'Disponible' : 'Sin disponibilidad'}
-                >
-                  {lbl}
-                </span>
-              );
-            })}
-          </div>
-        </div>
-
         {/* Fecha */}
-        <div className="mb-1">
+        <div className="mb-3">
           <label className="form-label">Fecha</label>
           <input
             type="date"
@@ -263,32 +148,33 @@ function TurnoFormPage() {
             className={`form-control ${errors.fecha ? 'is-invalid' : ''}`}
             value={form.fecha}
             onChange={handleChange}
-            disabled={!form.profesional}
           />
           {errors.fecha && <div className="invalid-feedback">{errors.fecha}</div>}
         </div>
-        <div className="form-text mb-3">{hintDisponibilidad}</div>
 
-        {/* Hora (solo slots válidos del día) */}
+        {/* Hora (simple, sin slots; el backend valida rango/disp.) */}
         <div className="mb-3">
           <label className="form-label">Hora</label>
-          <select
+          <input
+            type="time"
             name="hora"
-            className={`form-select ${errors.hora ? 'is-invalid' : ''}`}
+            className={`form-control ${errors.hora ? 'is-invalid' : ''}`}
             value={form.hora}
             onChange={handleChange}
-            disabled={!form.profesional || !form.fecha || horaOptions.length === 0}
-          >
-            <option value="">{horaOptions.length ? 'Seleccioná un horario' : 'Sin horarios disponibles'}</option>
-            {horaOptions.map((h) => <option key={h} value={h}>{h}</option>)}
-          </select>
+            step={1800} 
+          />
           {errors.hora && <div className="invalid-feedback">{errors.hora}</div>}
         </div>
 
         {/* Estado */}
         <div className="mb-3">
           <label className="form-label">Estado</label>
-          <select name="estado" className="form-select" value={form.estado} onChange={handleChange}>
+          <select
+            name="estado"
+            className="form-select"
+            value={form.estado}
+            onChange={handleChange}
+          >
             <option value="pendiente">Pendiente</option>
             <option value="confirmado">Confirmado</option>
             <option value="cancelado">Cancelado</option>
@@ -315,7 +201,7 @@ function TurnoFormPage() {
         </div>
 
         <button type="submit" className="btn btn-primary" disabled={submitting}>
-          {submitting ? 'Guardando...' : id ? 'Actualizar' : 'Crear'}
+          {submitting ? 'Guardando...' : isEdit ? 'Actualizar' : 'Crear'}
         </button>
         <Link to="/turnos" className="btn btn-secondary ms-2">Cancelar</Link>
       </form>
