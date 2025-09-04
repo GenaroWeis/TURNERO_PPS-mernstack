@@ -1,3 +1,5 @@
+// Parser de errores de API: toma un error de Axios y devuelve un objeto campo→mensaje listo para mostrar en UI.
+
 export function parseApiErrors(error) {
 
   const fallback = { _general: 'Ocurrió un error. Verificá los datos e intentá nuevamente.' };// Mensaje de error default

@@ -1,6 +1,6 @@
 import api from './api'; // misma instancia que el resto de services
 
-const RESOURCE = '/disponibilidades'; // ruta base del recurso disponibilidades
+const RESOURCE = '/disponibilidad'; // ruta base del recurso disponibilidades
 
 // GET ALL - listar todas las disponibilidades
 export const listDisponibilidades = async () => {
@@ -38,14 +38,18 @@ export const removeDisponibilidad = async (id) => {
   return res.status === 204; // true si se eliminó
 };
 
-// GET por profesional - listar disponibilidades de un profesional
 export const listDisponibilidadesByProfesional = async (profesionalId) => {
   try {
-    // /disponibilidades/profesional/:profesionalId
     const res = await api.get(`${RESOURCE}/profesional/${profesionalId}`);
     return Array.isArray(res.data?.data) ? res.data.data : [];
   } catch (err) {
-    if (err?.response?.status === 404) return [];
-    throw err; // otros errores sí se propagan
+    const status = err?.response?.status;
+    const msg = err?.response?.data?.message || '';
+    // Solo consideramos "sin resultados" cuando el backend lo dice explícito
+    if (status === 404 && /No se encontraron disponibilidades/i.test(msg)) {
+      return [];
+    }
+    throw err; // 404
   }
 };
+

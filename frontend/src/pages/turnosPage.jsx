@@ -1,4 +1,4 @@
-import { useEffect,  useMemo, useState } from 'react';
+import { useEffect, useMemo , useState } from 'react';
 // useState → estado local
 // useMemo → para calcular vista filtrada/ordenada sin recalcular de más
 // useEffect → efectos al montar/actualizar
@@ -6,32 +6,28 @@ import { Link, useLocation } from 'react-router-dom';
 // Link → navegación interna
 // useLocation → leer mensajes pasados por navigate
 import { listTurnos, removeTurno } from '../services/turnoService';
-// funciones del service de turnos
+
+import SearchBar from '../components/SearchBar';
+import EstadoFilter from '../components/EstadoFilter';
+import EstadoBadge from '../components/EstadoBadge'
+
+import { formatFecha, toYYYYMMDD } from '../utils/dateUtils';
+import { includesSome, normalize } from '../utils/searchUtils';
 
 function TurnosPage() {
   const [turnos, setTurnos] = useState([]);       // lista completa
   const [loading, setLoading] = useState(true);   // loader
   const [error, setError] = useState('');         // error general
   const [message, setMessage] = useState('');     // mensaje de éxito
+
   const [estadoFilter, setEstadoFilter] = useState(''); // filtro por estado
   const [query, setQuery] = useState('');         // búsqueda por profesional/cliente
+  const [dateFilter, setDateFilter] = useState(''); // YYYY-MM-DD
+
   const location = useLocation();
 
-  // Helpers de presentación
-  const formatFecha = (iso) => {
-    // formateo seguro de fecha a es-AR; si falla, mostramos '-'
-    const d = iso ? new Date(iso) : null;
-    return (d && !isNaN(d)) ? d.toLocaleDateString('es-AR') : '-';
-  };
 
   const formatHora = (h) => h || '-'; // hora ya viene HH:mm
-
-  const estadoBadgeClass = (estado) => {
-    // mapeo simple a clases de Bootstrap
-    if (estado === 'confirmado') return 'badge bg-success';
-    if (estado === 'cancelado') return 'badge bg-danger';
-    return 'badge bg-secondary'; // pendiente u otro
-  };
 
   // profesional: Nombre (Especialidad) — email
   const renderProfesional = (p) => {
@@ -52,7 +48,7 @@ function TurnosPage() {
     if (!c) return '-';
     const nombre = c.nombre || '-';
     const extra = c.dni
-      ? <span className="text-primary"> (DNI {c.dni})</span>   // color sutil para DNI entre paréntesis
+      ? <span className="text-primary"> (DNI {c.dni})</span> // color sutil para lo entre paréntesis
       : (c.email ? ` (${c.email})` : '');
     return <>{nombre}{extra}</>;
   };
@@ -74,9 +70,7 @@ function TurnosPage() {
   };
 
   // Cargar al montar
-  useEffect(() => {
-    fetchData();
-  }, []);
+  useEffect(() => { fetchData(); }, []);
 
   // Mensaje de éxito pasado por navigate (crear/editar/eliminar)
   useEffect(() => {
@@ -104,89 +98,87 @@ function TurnosPage() {
     }
   };
 
-  // Vista filtrada y ordenada (orden asc por fecha y hora)
+ // Filtrado + orden
   const viewTurnos = useMemo(() => {
-    const q = query.trim().toLowerCase();
+    let filtered = [...turnos];
 
-    // filtro por estado (si se eligió alguno)
-    let filtered = estadoFilter
-      ? turnos.filter(t => (t.estado || 'pendiente') === estadoFilter)
-      : [...turnos];
+    // 1) Estado
+    if (estadoFilter) {
+      filtered = filtered.filter(t => (t.estado || 'pendiente') === estadoFilter);
+    }
 
-    // búsqueda simple por profesional/cliente (nombre, especialidad, email, dni)
+    // 2) Fecha exacta (si se eligió en el date picker)
+    if (dateFilter) {
+      filtered = filtered.filter(t => toYYYYMMDD(t.fecha) === dateFilter);
+    }
+
+    // 3) Búsqueda de texto (prof/cli/dni/email/especialidad + fecha formateada)
+    const q = query.trim();
     if (q) {
       filtered = filtered.filter(t => {
-        const profNombre = t.profesional?.nombre?.toLowerCase() || '';
-        const profEsp = t.profesional?.especialidad?.toLowerCase() || '';
-        const profEmail = t.profesional?.email?.toLowerCase() || '';
-        const cliNombre = t.cliente?.nombre?.toLowerCase() || '';
-        const cliEmail = t.cliente?.email?.toLowerCase() || '';
-        const cliDni = t.cliente?.dni?.toLowerCase?.() || String(t.cliente?.dni || '').toLowerCase();
-        return (
-          profNombre.includes(q) ||
-          profEsp.includes(q) ||
-          profEmail.includes(q) ||
-          cliNombre.includes(q) ||
-          cliEmail.includes(q) ||
-          cliDni.includes(q)
-        );
+        const prof = t.profesional || {};
+        const cli  = t.cliente || {};
+
+        // Campos a matchear
+        const fields = [
+          prof.nombre, prof.especialidad, prof.email,
+          cli.nombre, cli.email,
+          String(cli.dni ?? ''),
+          // también dejamos que matchee por fecha mostrada
+          formatFecha(t.fecha),
+          // y por hora si quisieras
+          t.hora,
+        ];
+        return includesSome(q, fields);
       });
     }
 
-    // orden ascendente por fecha y luego hora
+    // 4) Orden: por fecha y hora asc
     filtered.sort((a, b) => {
       const da = a.fecha ? new Date(a.fecha).getTime() : 0;
       const db = b.fecha ? new Date(b.fecha).getTime() : 0;
-      if (da !== db) return da - db;// hora viene "HH:mm" → sort de string funciona si está cero-pad
+      if (da !== db) return da - db;
       const ha = a.hora || '';
       const hb = b.hora || '';
       return ha.localeCompare(hb);
     });
 
     return filtered;
-  }, [turnos, estadoFilter, query]);
+  }, [turnos, estadoFilter, dateFilter, query]);
 
   if (loading) return <div className="container py-3">Cargando...</div>;
 
-    return (
+  return (
     <div className="container py-3">
-      {/* Header con botón */}
+      {/* Header */}
       <div className="d-flex justify-content-between align-items-center mb-3">
         <h1 className="h3 m-0">Turnos</h1>
         <Link to="/turnos/nuevo" className="btn btn-primary">Nuevo turno</Link>
       </div>
 
-      {/* Filtros: búsqueda + estado */}
+      {/* Filtros */}
       <div className="row g-2 mb-3">
-        <div className="col-12 col-md-6">
-          <label className="form-label mb-1">Buscar por profesional o cliente</label>
-          <input
-            type="text"
-            className="form-control"
-            placeholder="Ej: Julieta, Colorista, juan@correo, 46613030"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
+        <div className="col-12 col-md-9">
+          <SearchBar
+            labelText="Buscar por profesional, profesión, cliente, DNI o fecha"
+            placeholder="Ej: Julieta, Colorista, juan@correo, 46613030, 12/09/2025"
+            query={query}
+            onQueryChange={setQuery}
+            showDate
+            dateValue={dateFilter}
+            onDateChange={setDateFilter}
           />
         </div>
         <div className="col-12 col-md-3">
-          <label className="form-label mb-1">Estado</label>
-          <select
-            className="form-select"
-            value={estadoFilter}
-            onChange={(e) => setEstadoFilter(e.target.value)}
-          >
-            <option value="">Todos</option>
-            <option value="pendiente">Pendiente</option>
-            <option value="confirmado">Confirmado</option>
-            <option value="cancelado">Cancelado</option>
-          </select>
+          <EstadoFilter value={estadoFilter} onChange={setEstadoFilter} />
         </div>
       </div>
 
-      {/* Errores y mensajes */}
+      {/* Mensajes */}
       {error && <div className="alert alert-danger">{error}</div>}
       {message && <div className="alert alert-success">{message}</div>}
 
+      {/* Tabla */}
       {viewTurnos.length === 0 && !error ? (
         <div className="alert alert-info">No hay turnos que coincidan con el filtro.</div>
       ) : (
@@ -207,11 +199,7 @@ function TurnosPage() {
                 <tr key={t._id}>
                   <td>{formatFecha(t.fecha)}</td>
                   <td>{formatHora(t.hora)}</td>
-                  <td>
-                    <span className={estadoBadgeClass(t.estado)}>
-                      {t.estado || 'pendiente'}
-                    </span>
-                  </td>
+                  <td><EstadoBadge estado={t.estado} /></td>
                   <td>{renderProfesional(t.profesional)}</td>
                   <td>{renderCliente(t.cliente)}</td>
                   <td>
@@ -231,6 +219,5 @@ function TurnosPage() {
     </div>
   );
 }
-
 
 export default TurnosPage;

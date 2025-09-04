@@ -1,17 +1,21 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 // useState → para manejar estado dentro del componente
+// useMemo → para calcular vista filtrada/ordenada sin recalcular de más
 // useEffect → para ejecutar código en momentos específicos del ciclo de vida del componente
 import { Link, useLocation } from 'react-router-dom';
 // Link → para crear enlaces internos sin recargar la página
 // useLocation → nos permite acceder al estado de la navegación (por ejemplo mensajes enviados al volver de otra página)
+
 import { listClientes, removeCliente } from '../services/clienteService';
-// importamos las funciones del service de clientes
+import SearchBar from '../components/SearchBar';
+import { includesSome } from '../utils/searchUtils';
 
 function ClientesPage() {
   const [clientes, setClientes] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
+  const [query, setQuery] = useState('');
   const location = useLocation();
 
   // FUNCION PARA TRAER LOS CLIENTES DEL BACKEND
@@ -61,6 +65,32 @@ function ClientesPage() {
     }
   };
 
+  // Vista filtrada y ordenada (apellido, luego nombre)
+  const viewClientes = useMemo(() => {
+    let filtered = [...clientes];
+
+    if (query.trim()) {
+      filtered = filtered.filter((c) =>
+        includesSome(query, [
+          c.nombre,
+          c.apellido,
+          c.email,
+          c.telefono,
+          String(c.dni ?? ''),
+          c.direccion,
+        ])
+      );
+    }
+
+    filtered.sort((a, b) => {
+      const ap = (a.apellido || '').localeCompare(b.apellido || '');
+      if (ap !== 0) return ap;
+      return (a.nombre || '').localeCompare(b.nombre || '');
+    });
+
+    return filtered;
+  }, [clientes, query]);
+
   if (loading) return <div className="container py-3">Cargando...</div>;
 
   return (
@@ -70,14 +100,22 @@ function ClientesPage() {
         <Link to="/clientes/nuevo" className="btn btn-primary">Nuevo cliente</Link>
       </div>
 
-      {/* mostramos primero errores generales */}
-      {error && <div className="alert alert-danger">{error}</div>}
+      {/* Barra de búsqueda */}
+      <div className="mb-3">
+        <SearchBar
+          labelText="Buscar cliente"
+          placeholder="Ej: Julieta, Gómez, 351..., 46613030, correo@mail.com"
+          query={query}
+          onQueryChange={setQuery}
+          /* sin fecha para clientes */
+        />
+      </div>
 
-      {/* mensaje de éxito */}
+      {error && <div className="alert alert-danger">{error}</div>}
       {message && <div className="alert alert-success">{message}</div>}
 
-      {clientes.length === 0 && !error ? ( // mostramos info solo si no hay error
-        <div className="alert alert-info">No hay clientes cargados.</div>
+      {viewClientes.length === 0 && !error ? (
+        <div className="alert alert-info">No hay clientes que coincidan con la búsqueda.</div>
       ) : (
         <div className="table-responsive">
           <table className="table table-striped align-middle">
@@ -93,7 +131,7 @@ function ClientesPage() {
               </tr>
             </thead>
             <tbody>
-              {clientes.map((c) => (
+              {viewClientes.map((c) => (
                 <tr key={c._id}>
                   <td>{c.nombre}</td>
                   <td>{c.apellido}</td>
@@ -118,5 +156,6 @@ function ClientesPage() {
     </div>
   );
 }
+
 
 export default ClientesPage;

@@ -5,14 +5,9 @@ import { useNavigate, useParams, Link } from 'react-router-dom';
 // useNavigate → permite redirigir programáticamente a otra ruta
 // useParams → obtiene parámetros de la URL, como el id del profesional
 // Link → para generar enlaces que no recargan la página
-import {
-  getProfesionalById,
-  createProfesional,
-  updateProfesional,
-} from '../services/profesionalService';
-// Importamos funciones del service para interactuar con el backend
+import {getProfesionalById, createProfesional, updateProfesional } from '../services/profesionalService';
 import { parseApiErrors } from '../utils/parseApiErrors';
-// importamos el adaptador de errores
+import InputField from '../components/InputField';
 
 // Estado inicial del formulario: todos los campos vacíos
 const initialForm = {
@@ -107,53 +102,42 @@ function ProfesionalFormPage() {
       {errors._general && <div className="alert alert-danger">{errors._general}</div>}
 
       <form onSubmit={handleSubmit} noValidate>
-        <div className="mb-3">
-          <label className="form-label">Nombre</label>
-          <input
-            type="text"
-            name="nombre"
-            className={`form-control ${errors.nombre ? 'is-invalid' : ''}`}
-            value={form.nombre}
-            onChange={handleChange}
-          />
-          {errors.nombre && <div className="invalid-feedback">{errors.nombre}</div>}
-        </div>
+        <InputField
+          label="Nombre"
+          name="nombre"
+          value={form.nombre}
+          onChange={handleChange}
+          error={errors.nombre}
+          placeholder="Ej: Julieta Romeo"
+        />
 
-        <div className="mb-3">
-          <label className="form-label">Especialidad</label>
-          <input
-            type="text"
-            name="especialidad"
-            className={`form-control ${errors.especialidad ? 'is-invalid' : ''}`}
-            value={form.especialidad}
-            onChange={handleChange}
-          />
-          {errors.especialidad && <div className="invalid-feedback">{errors.especialidad}</div>}
-        </div>
+        <InputField
+          label="Especialidad"
+          name="especialidad"
+          value={form.especialidad}
+          onChange={handleChange}
+          error={errors.especialidad}
+          placeholder="Ej: Colorista"
+        />
 
-        <div className="mb-3">
-          <label className="form-label">Email</label>
-          <input
-            type="email"
-            name="email"
-            className={`form-control ${errors.email ? 'is-invalid' : ''}`}
-            value={form.email}
-            onChange={handleChange}
-          />
-          {errors.email && <div className="invalid-feedback">{errors.email}</div>}
-        </div>
+        <InputField
+          label="Email"
+          name="email"
+          type="email"
+          value={form.email}
+          onChange={handleChange}
+          error={errors.email}
+          placeholder="ejemplo@mail.com"
+        />
 
-        <div className="mb-3">
-          <label className="form-label">Teléfono</label>
-          <input
-            type="text"
-            name="telefono"
-            className={`form-control ${errors.telefono ? 'is-invalid' : ''}`}
-            value={form.telefono}
-            onChange={handleChange}
-          />
-          {errors.telefono && <div className="invalid-feedback">{errors.telefono}</div>}
-        </div>
+        <InputField
+          label="Teléfono"
+          name="telefono"
+          value={form.telefono}
+          onChange={handleChange}
+          error={errors.telefono}
+          placeholder="Ej: 351-555-1234"
+        />
 
         <button type="submit" className="btn btn-primary" disabled={submitting}>
           {submitting ? 'Guardando...' : isEdit ? 'Actualizar' : 'Crear'}
