@@ -6,7 +6,8 @@ import ProfesionalesPage from './pages/ProfesionalesPage';
 import ProfesionalFormPage from './pages/ProfesionalFormPage';//formulario CREATE/UPDATE
 import ClientesPage from './pages/ClientesPage';
 import ClienteFormPage from './pages/ClienteFormPage';//formulario CREATE/UPDATE
-import DisponibilidadPage from './pages/DisponibilidadPage';
+import DisponibilidadPage from './pages/DisponibilidadesPage';
+import DisponibilidadFormPage from './pages/DisponibilidadFormPage';
 import Navbar from './components/Navbar';
 
 function App() {
@@ -25,6 +26,8 @@ function App() {
         <Route path="/clientes/nuevo" element={<ClienteFormPage />} />
         <Route path="/clientes/:id/editar" element={<ClienteFormPage />} />
         <Route path="/disponibilidad" element={<DisponibilidadPage />} />
+        <Route path="/disponibilidad/nuevo" element={<DisponibilidadFormPage />} />
+        <Route path="/disponibilidad/:id/editar" element={<DisponibilidadFormPage />} />
       </Routes>
     </Router>
   );

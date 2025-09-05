@@ -1,23 +1,14 @@
 const Turno = require("../models/Turno");
 const Disponibilidad = require("../models/Disponibilidad");
-const Profesional = require('../models/profesional');
+const Profesional = require("../models/profesional");
 const Cliente = require("../models/Cliente");
+const {
+  toHHmm,
+  horaDentroDeRangos,
+  weekdayEsUTC,
+  rangesLabel,
+} = require("../utils/timeUtils");
 
-// --- helpers de hora ---
-const pad2 = (s) => s?.toString().padStart(2, '0');             // agrega 0 a la izquierda si hace falta (→ "09")
-const toHHmm = (hhmm) => {
-  if (!hhmm) return '';                                         // sin valor → cadena vacía (evito "undefined")
-  const [h, m = '00'] = hhmm.split(':');                        // si no viene minuto, asumo "00"
-  return `${pad2(h)}:${pad2(m)}`;                               // aseguro formato "HH:mm"
-};
-const toMinutes = (hhmm) => {
-  if (!hhmm) return -1;                                         // sin valor → -1 (indicador inválido)
-  const [h, m = '0'] = hhmm.split(':').map(Number);             // parseo a números; minuto opcional
-  return (h * 60) + (m || 0);                                   // minutos totales desde 00:00
-};
-
-// Para mensajes claros cuando hay múltiples rangos
-const rangesLabel = (list=[]) => list.map(d => `${toHHmm(d.horaInicio)} - ${toHHmm(d.horaFin)}`).join(', ');
 
 // Obtener todos los turnos (GET)
 const getTurnos = async (req, res) => {
@@ -36,11 +27,11 @@ const createTurno = async (req, res) => {
   try {
     const { fecha, hora, profesional, cliente } = req.body;
 
-    // Normalizar hora y tolerar duplicados con/ sin padding
+    // Normalizar hora
     const hTurno = toHHmm(hora);
     const horasCheck = (hora && hora !== hTurno) ? [hTurno, hora] : [hTurno];
 
-    // Duplicado exacto (mismo prof, fecha y hora)
+    // Duplicado exacto (prof + fecha + hora)
     const existeTurno = await Turno.findOne({ profesional, fecha, hora: { $in: horasCheck } });
     if (existeTurno) {
       return res.status(400).json({
@@ -49,19 +40,15 @@ const createTurno = async (req, res) => {
       });
     }
 
-    // Verificar existencia de cliente/profesional
+    // Existencia de cliente/profesional
     const existeCliente = await Cliente.findById(cliente);
     const existeProfesional = await Profesional.findById(profesional);
     if (!existeCliente || !existeProfesional) {
       return res.status(404).json({ status: "error", message: "Cliente o profesional inexistente" });
     }
 
-    // Día de la semana (UTC)
-    const dias = ["domingo", "lunes", "martes", "miércoles", "jueves", "viernes", "sábado"];
-    const d = new Date(fecha);
-    const diaTurno = dias[d.getUTCDay()];
-
-    // Traer TODAS las disponibilidades del día para ese profesional
+    // Día ES (UTC) y disponibilidades del día
+    const diaTurno = weekdayEsUTC(fecha);
     const disponibilidades = await Disponibilidad.find({ profesional, diaSemana: diaTurno });
     if (!disponibilidades.length) {
       return res.status(400).json({
@@ -71,12 +58,7 @@ const createTurno = async (req, res) => {
     }
 
     // Validar que la hora caiga en ALGÚN rango
-    const val = toMinutes(hTurno);
-    const okEnAlguno = disponibilidades.some(d => {
-      const ini = toMinutes(toHHmm(d.horaInicio));
-      const fin = toMinutes(toHHmm(d.horaFin));
-      return val >= ini && val < fin;
-    });
+    const okEnAlguno = horaDentroDeRangos(hTurno, disponibilidades);
     if (!okEnAlguno) {
       return res.status(400).json({
         status: "error",
@@ -84,7 +66,7 @@ const createTurno = async (req, res) => {
       });
     }
 
-    // Crear y guardar (hora normalizada)
+    // Crear (hora normalizada)
     const nuevoTurno = new Turno({ ...req.body, hora: hTurno });
     const turnoGuardado = await nuevoTurno.save();
     return res.status(201).json({ status: "ok", data: turnoGuardado });
@@ -115,32 +97,27 @@ const updateTurno = async (req, res) => {
   try {
     const { id } = req.params;
 
-    // Traer el turno actual
     const turnoActual = await Turno.findById(id);
     if (!turnoActual) {
       return res.status(404).json({ status: "error", message: "Turno no encontrado" });
     }
 
-    // Resolver nuevos valores (si no vienen, usamos los actuales)
-    const nuevaFecha = (typeof req.body.fecha !== 'undefined') ? req.body.fecha : turnoActual.fecha;
-    const nuevaHora  = (typeof req.body.hora  !== 'undefined') ? req.body.hora  : turnoActual.hora;
-    const nuevoProf  = (typeof req.body.profesional !== 'undefined') ? req.body.profesional : turnoActual.profesional;
-    const nuevoCli   = (typeof req.body.cliente !== 'undefined') ? req.body.cliente : turnoActual.cliente;
-    const nuevoEstado= (typeof req.body.estado !== 'undefined') ? req.body.estado : turnoActual.estado;
+    // Resolver nuevos valores (fallback a los actuales)
+    const nuevaFecha = (req.body.fecha ?? turnoActual.fecha);
+    const nuevaHora  = (req.body.hora ?? turnoActual.hora);
+    const nuevoProf  = (req.body.profesional ?? turnoActual.profesional);
+    const nuevoCli   = (req.body.cliente ?? turnoActual.cliente);
+    const nuevoEstado= (req.body.estado ?? turnoActual.estado);
 
-    // Verificar existencia de cliente/profesional
+    // Existencia
     const existeCliente = await Cliente.findById(nuevoCli);
     const existeProfesional = await Profesional.findById(nuevoProf);
     if (!existeCliente || !existeProfesional) {
       return res.status(404).json({ status: "error", message: "Cliente o profesional inexistente" });
     }
 
-    // Día de semana en UTC 
-    const dias = ["domingo", "lunes", "martes", "miércoles", "jueves", "viernes", "sábado"];
-    const d = new Date(nuevaFecha);
-    const diaTurno = dias[d.getUTCDay()];
-
-    // Traer TODAS las disponibilidades del día para ese profesional
+    // Disponibilidades del día
+    const diaTurno = weekdayEsUTC(nuevaFecha);
     const disponibilidades = await Disponibilidad.find({ profesional: nuevoProf, diaSemana: diaTurno });
     if (!disponibilidades.length) {
       return res.status(400).json({
@@ -149,14 +126,9 @@ const updateTurno = async (req, res) => {
       });
     }
 
-    // Normalizar y validar hora contra cualquiera de los rangos
+    // Validar hora contra rangos
     const hTurno = toHHmm(nuevaHora);
-    const val = toMinutes(hTurno);
-    const okEnAlguno = disponibilidades.some(d => {
-      const ini = toMinutes(toHHmm(d.horaInicio));
-      const fin = toMinutes(toHHmm(d.horaFin));
-      return val >= ini && val < fin;
-    });
+    const okEnAlguno = horaDentroDeRangos(hTurno, disponibilidades);
     if (!okEnAlguno) {
       return res.status(400).json({
         status: "error",
