@@ -203,7 +203,7 @@ function DisponibilidadFormPage() {
               type="time"
               value={form.horaInicio}
               onChange={handleChange}
-              errorText={errors.horaInicio}
+              error={errors.horaInicio}
             />
           </div>
           <div className="col-12 col-md-6">
@@ -213,7 +213,7 @@ function DisponibilidadFormPage() {
               type="time"
               value={form.horaFin}
               onChange={handleChange}
-              errorText={errors.horaFin}
+              error={errors.horaFin}
             />
           </div>
         </div>

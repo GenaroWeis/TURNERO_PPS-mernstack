@@ -34,7 +34,7 @@ const createDisponibilidad = async (req, res) => {
     // Profesional existente
     const existsProf = await Profesional.findById(profesional);
     if (!existsProf) {
-      return res.status(404).json({ status: "error", message: "Profesional inexistente" });
+      return res.status(404).json(fieldError("profesional", "Profesional inexistente"));
     }
 
     // Existentes (mismo día/prof)
@@ -139,7 +139,7 @@ const updateDisponibilidad = async (req, res) => {
     // Profesional existente
     const existsProf = await Profesional.findById(profesional);
     if (!existsProf) {
-      return res.status(404).json({ status: "error", message: "Profesional inexistente" });
+      return res.status(404).json(fieldError("profesional", "Profesional inexistente"));
     }
 
     // Otras disponibilidades del mismo prof/día (excluyendo la actual)
@@ -176,7 +176,7 @@ const updateDisponibilidad = async (req, res) => {
     const actualizada = await actual.save();
     return res.status(200).json({ status: "ok", data: actualizada });
   } catch (err) {
-    return res.status(400).json({ status: "error", message: "Error al actualizar disponibilidad", error: err });
+    return res.status(500).json({ status: "error", message: "Error al actualizar disponibilidad", error: err });
   }
 };
 

@@ -185,13 +185,16 @@ function TurnoFormPage() {
           disabled={!form.profesional}
         />
             
-        {/* Hora – limitado por rangos del día */}
-        <HoraSelect
-          ranges={rangesForDay}
-          value={form.hora}
-          onChange={handleChange}
-          disabled={!form.profesional || !form.fecha}
-        />
+      {/* Hora – limitado por rangos del día */}
+        <div className="mb-3">
+          <HoraSelect
+            ranges={rangesForDay}
+            value={form.hora}
+            onChange={handleChange}
+            disabled={!form.profesional || !form.fecha}
+          />
+          {errors.hora && <div className="invalid-feedback d-block">{errors.hora}</div>}
+        </div>
 
 
         {/* Estado */}

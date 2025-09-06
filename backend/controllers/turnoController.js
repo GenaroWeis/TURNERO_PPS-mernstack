@@ -8,6 +8,7 @@ const {
   weekdayEsUTC,
   rangesLabel,
 } = require("../utils/timeUtils");
+const { fieldError } = require("../utils/fieldError");
 
 
 // Obtener todos los turnos (GET)
@@ -34,36 +35,30 @@ const createTurno = async (req, res) => {
     // Duplicado exacto (prof + fecha + hora)
     const existeTurno = await Turno.findOne({ profesional, fecha, hora: { $in: horasCheck } });
     if (existeTurno) {
-      return res.status(400).json({
-        status: "error",
-        message: "Ya hay un turno agendado para ese horario con ese profesional"
-      });
+      return res.status(400).json(fieldError("hora", "Ya hay un turno agendado para ese horario con ese profesional"));
     }
 
     // Existencia de cliente/profesional
     const existeCliente = await Cliente.findById(cliente);
     const existeProfesional = await Profesional.findById(profesional);
     if (!existeCliente || !existeProfesional) {
-      return res.status(404).json({ status: "error", message: "Cliente o profesional inexistente" });
+      const errors = [];
+      if (!existeCliente) errors.push({ param: "cliente", msg: "Cliente inexistente" });
+      if (!existeProfesional) errors.push({ param: "profesional", msg: "Profesional inexistente" });
+      return res.status(404).json({ status: "error", errors });
     }
 
     // Día ES (UTC) y disponibilidades del día
     const diaTurno = weekdayEsUTC(fecha);
     const disponibilidades = await Disponibilidad.find({ profesional, diaSemana: diaTurno });
     if (!disponibilidades.length) {
-      return res.status(400).json({
-        status: "error",
-        message: `El profesional no tiene disponibilidad registrada para el día ${diaTurno}`
-      });
+      return res.status(400).json(fieldError("fecha", `El profesional no tiene disponibilidad registrada para el día ${diaTurno}`));
     }
 
     // Validar que la hora caiga en ALGÚN rango
     const okEnAlguno = horaDentroDeRangos(hTurno, disponibilidades);
     if (!okEnAlguno) {
-      return res.status(400).json({
-        status: "error",
-        message: `Horario fuera del rango disponible (${rangesLabel(disponibilidades)})`
-      });
+     return res.status(400).json(fieldError("hora", `Horario fuera del rango disponible (${rangesLabel(disponibilidades)})`));
     }
 
     // Crear (hora normalizada)
@@ -113,27 +108,24 @@ const updateTurno = async (req, res) => {
     const existeCliente = await Cliente.findById(nuevoCli);
     const existeProfesional = await Profesional.findById(nuevoProf);
     if (!existeCliente || !existeProfesional) {
-      return res.status(404).json({ status: "error", message: "Cliente o profesional inexistente" });
+      const errors = [];
+      if (!existeCliente) errors.push({ param: "cliente", msg: "Cliente inexistente" });
+      if (!existeProfesional) errors.push({ param: "profesional", msg: "Profesional inexistente" });
+      return res.status(404).json({ status: "error", errors });
     }
 
     // Disponibilidades del día
     const diaTurno = weekdayEsUTC(nuevaFecha);
     const disponibilidades = await Disponibilidad.find({ profesional: nuevoProf, diaSemana: diaTurno });
     if (!disponibilidades.length) {
-      return res.status(400).json({
-        status: "error",
-        message: `El profesional no tiene disponibilidad registrada para el día ${diaTurno}`
-      });
+      return res.status(400).json(fieldError("fecha", `El profesional no tiene disponibilidad registrada para el día ${diaTurno}`));
     }
 
     // Validar hora contra rangos
     const hTurno = toHHmm(nuevaHora);
     const okEnAlguno = horaDentroDeRangos(hTurno, disponibilidades);
     if (!okEnAlguno) {
-      return res.status(400).json({
-        status: "error",
-        message: `Horario fuera del rango disponible (${rangesLabel(disponibilidades)})`
-      });
+      return res.status(400).json(fieldError("hora", `Horario fuera del rango disponible (${rangesLabel(disponibilidades)})`));
     }
 
     // Choque con otro turno (tolerante a padding previo)
@@ -145,10 +137,7 @@ const updateTurno = async (req, res) => {
       hora: { $in: horasCheck }
     });
     if (choque) {
-      return res.status(400).json({
-        status: "error",
-        message: "Ya hay un turno agendado para ese horario con ese profesional"
-      });
+      return res.status(400).json(fieldError("hora", "Ya hay un turno agendado para ese horario con ese profesional"));
     }
 
     // Persistir normalizado y devolver populado 
@@ -165,7 +154,7 @@ const updateTurno = async (req, res) => {
 
     return res.status(200).json({ status: "ok", data: turnoConPopulate });
   } catch (err) {
-    return res.status(400).json({ status: "error", message: "Error al actualizar turno", error: err });
+    return res.status(500).json({ status: "error", message: "Error al actualizar turno", error: err });
   }
 };
 
