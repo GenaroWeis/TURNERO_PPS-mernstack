@@ -1,5 +1,5 @@
 const Disponibilidad = require("../models/Disponibilidad");
-const Profesional = require("../models/profesional");
+const Profesional = require("../models/Profesional");
 
 const { toHHmm, toMinutes } = require("../utils/timeUtils");
 const { fieldError } = require("../utils/fieldError");

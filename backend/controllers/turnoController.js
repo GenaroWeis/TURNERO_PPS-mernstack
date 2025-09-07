@@ -1,6 +1,6 @@
 const Turno = require("../models/Turno");
 const Disponibilidad = require("../models/Disponibilidad");
-const Profesional = require("../models/profesional");
+const Profesional = require("../models/Profesional");
 const Cliente = require("../models/Cliente");
 const {
   toHHmm,

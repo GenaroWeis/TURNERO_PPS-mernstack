@@ -1,4 +1,4 @@
-const Profesional = require('../models/profesional');
+const Profesional = require('../models/Profesional');
 
 // Obtener todos los profesionales (GET)
 const getProfesionales = async (req, res) => {
