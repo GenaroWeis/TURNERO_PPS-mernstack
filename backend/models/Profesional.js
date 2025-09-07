@@ -5,6 +5,7 @@ const ProfesionalSchema = new mongoose.Schema({
   especialidad: { type: String, required: true, trim: true },
   email: { type: String, required: true, unique: true, trim: true },
   telefono: { type: String, required: true, trim: true },
+  createdAt: { type: Date, default: Date.now }
 });
 
 module.exports = mongoose.model("Profesional", ProfesionalSchema);

@@ -23,10 +23,29 @@ export function parseApiErrors(error) {
   }
 
   // B) Otros errores de los controllers (Mongo, etc)
-  // Convertir el error a string para poder buscar patrones (como duplicados en Mongo)
-  const rawErr = String(data.error || '');
-  if (/E11000/i.test(rawErr) && /email/i.test(rawErr)) {// Si es error de duplicado de email en Mongo (E11000), devolvemos un mensaje
-    return { email: 'Ese email ya está registrado.' };
+  //Duplicados de Mongo (E11000)
+  const raw = String(data.error || data.message || '');
+  const keyValue = data?.error?.keyValue || data?.keyValue; // a veces viene así desde Mongoose
+
+  // 1) Si viene keyValue estructurado, es lo más confiable
+  if (keyValue && typeof keyValue === 'object') {
+    const [dupKey] = Object.keys(keyValue);
+    if (dupKey) {
+      const msg = dupKey === 'email'
+        ? 'Ese email ya está registrado.'
+        : dupKey === 'dni'
+        ? 'Ese DNI ya está registrado.'
+        : 'Dato único duplicado.';
+      return { [dupKey]: msg };
+    }
+  }
+
+  // 2) Si no, parseo el string del error
+  if (/E11000/i.test(raw)) {
+    const lower = raw.toLowerCase();
+    if (lower.includes('email'))    return { email: 'Ese email ya está registrado.' };
+    if (lower.includes('dni'))      return { dni: 'Ese DNI ya está registrado.' };
+    return { _general: 'Dato único duplicado.' };
   }
 
   if (typeof data.message === 'string' && data.message.trim()) { // Si el backend envió un mensaje general, lo usamos como error general
