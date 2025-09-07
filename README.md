@@ -79,7 +79,7 @@ En un salón de belleza, se cargan los distintos profesionales (estilista, color
 - MongoDB  
 - Archivo `.env` en backend y frontend  
 
-##### levantar Mongo
+##### levantar Mongo a nivel local 
  ```bash 
 #CMD
 mongod
@@ -146,7 +146,7 @@ Gran parte de la documentación se encuentra en los **comentarios dentro del có
 - **Disponibilidad**: días y horarios en que un profesional atiende  
 - **Turno**: fecha, hora, estado, vinculado a un cliente y un profesional  
 
-👉 Ver **diagrama entidad–relación** en la documentación adjunta.
+👉 Ver **diagrama entidad–relación** (https://drive.google.com/file/d/1b6GIoFla9w3I0r2elchnrTvyJ7oAcILu/view?usp=sharing.)
 
 ![Diagrama ER del sistema](docs/diagramaER.png)
 
