@@ -148,7 +148,7 @@ Gran parte de la documentación se encuentra en los **comentarios dentro del có
 
 👉 Ver **diagrama entidad–relación** (https://drive.google.com/file/d/1b6GIoFla9w3I0r2elchnrTvyJ7oAcILu/view?usp=sharing.)
 
-![Diagrama ER del sistema](docs/diagramaER.png)
+![Diagrama ER del sistema](docs/TurneroMernPPS(ER).png)
 
 ### Validaciones
 
