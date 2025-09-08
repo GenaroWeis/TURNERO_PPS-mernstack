@@ -2,7 +2,7 @@
 
 **Autor:** Genaro Weis  
 **Carrera:** Tecnicatura Universitaria en Programación – UTN FRBB  
-**Proyecto:** Práctica Profesional Supervisada (PPS)  
+**Proyecto:** Presentación Practica Supervisada (PPS)  
 
 ---
 
